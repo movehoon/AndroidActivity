@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hello">Hello World, TwitterBotActivity!</string>
+    <string name="app_name">TwitterBot</string>
+    <string name="action_settings">action_settings</string>
+</resources>

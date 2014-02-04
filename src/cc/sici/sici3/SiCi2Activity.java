@@ -10,7 +10,6 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
@@ -22,7 +21,6 @@ import android.hardware.SensorManager;
 import android.media.MediaRecorder;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
-import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -31,6 +29,7 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -169,6 +168,18 @@ public class SiCi2Activity extends UnityPlayerActivity implements
             mBTManager.stop();
         if (mSensorManager != null)
             mSensorManager.stop();
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        // TODO Auto-generated method stub
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            if (keyCode == KeyEvent.KEYCODE_BACK) {
+                UnityPlayer.UnitySendMessage(UnityObjectName, "OnKeyDown", "BACK");
+                return true;
+            }
+        }
+        return super.onKeyDown(keyCode, event);
     }
 
     public void UnitysendState(String msg) {

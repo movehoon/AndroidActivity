@@ -677,17 +677,16 @@ public class SiCi2Activity extends UnityPlayerActivity implements
     }
 
     // ----- Android Mic Amplitude Methods -----
-    private final String MIC_FILE_PATH = "/sdcard/tmp.3gp";
     private MediaRecorder mMediaRecorder = new MediaRecorder();
     int mMediaAmplitude = -1;
     Timer micTimer = null;
 
-    public void enableMic() {
+    public void enableMic(String filepath) {
         mMediaRecorder.reset();
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.DEFAULT);
         mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT);
-        mMediaRecorder.setOutputFile(MIC_FILE_PATH);
+        mMediaRecorder.setOutputFile(filepath);
         try {
             mMediaRecorder.prepare();
         } catch (IllegalStateException e) {
@@ -721,9 +720,6 @@ public class SiCi2Activity extends UnityPlayerActivity implements
         if (mMediaRecorder != null) {
             mMediaRecorder.stop();
         }
-        File file = new File(MIC_FILE_PATH);
-        if (file != null)
-            file.delete();
     }
 
     // ----- End of Android Mic Amplitude Methods -----

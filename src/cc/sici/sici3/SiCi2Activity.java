@@ -1,6 +1,5 @@
 package cc.sici.sici3;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,6 +9,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
@@ -30,6 +30,7 @@ import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -59,6 +60,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
     private final String OLLONAME3 = "ROBOTIS BT-210";
     private final String DISHNAME = "DISH";
     private final String UCRNAME = "UCR";
+    private final String SICINAME = "SiCi";
     private BTManager mBTManager = null;
 
     public enum ROBOT_MODE {
@@ -94,8 +96,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 
     public void CheckRecognizer() {
         if (mRecognizer == null) {
-            UnityPlayer.UnitySendMessage(UnityObjectName, "OffRecognizer",
-                    "Off");
+            UnityPlayer.UnitySendMessage(UnityObjectName, "OffRecognizer", "Off");
         } else {
             UnityPlayer
                     .UnitySendMessage(UnityObjectName, "OffRecognizer", "On");
@@ -171,15 +172,9 @@ public class SiCi2Activity extends UnityPlayerActivity implements
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        // TODO Auto-generated method stub
-        if (event.getAction() == KeyEvent.ACTION_DOWN) {
-            if (keyCode == KeyEvent.KEYCODE_BACK) {
-                UnityPlayer.UnitySendMessage(UnityObjectName, "OnKeyDown", "BACK");
-                return true;
-            }
-        }
-        return super.onKeyDown(keyCode, event);
+    public void onBackPressed() {
+        Log.d(TAG, "onBackPressed");
+        super.onBackPressed();
     }
 
     public void UnitysendState(String msg) {
@@ -197,17 +192,14 @@ public class SiCi2Activity extends UnityPlayerActivity implements
     private RecognitionListener listener = new RecognitionListener() {
 
         public void onBeginningOfSpeech() {
-            // TODO Auto-generated method stub
             UnitysendState("사용자말시작");
         }
 
         public void onBufferReceived(byte[] buffer) {
-            // TODO Auto-generated method stub
 
         }
 
         public void onEndOfSpeech() {
-            // TODO Auto-generated method stub
             UnitysendState("사용자말중지");
         }
 
@@ -217,7 +209,6 @@ public class SiCi2Activity extends UnityPlayerActivity implements
          * @see android.speech.RecognitionListener#onError(int)
          */
         public void onError(int error) {
-            // TODO Auto-generated method stub
             String msg = null;
 
             switch (error) {
@@ -259,23 +250,19 @@ public class SiCi2Activity extends UnityPlayerActivity implements
         }
 
         public void onEvent(int eventType, Bundle params) {
-            // TODO Auto-generated method stub
 
         }
 
         public void onPartialResults(Bundle partialResults) {
-            // TODO Auto-generated method stub
 
         }
 
         public void onReadyForSpeech(Bundle params) {
-            // TODO Auto-generated method stub
             UnitysendState("준비");
             Log.d("Speech", "ready");
         }
 
         public void onResults(Bundle results) {
-            // TODO Auto-generated method stub
             // Log.d("Speech", "onResults");
 
             ArrayList<String> strlist = results
@@ -291,8 +278,6 @@ public class SiCi2Activity extends UnityPlayerActivity implements
         }
 
         public void onRmsChanged(float rmsdB) {
-            // TODO Auto-generated method stub
-
         }
 
     };
@@ -429,10 +414,11 @@ public class SiCi2Activity extends UnityPlayerActivity implements
                     LogMessage("BT", deviceName + " => " + bd.getAddress());
 
                     if (deviceName.equalsIgnoreCase(OLLONAME)
-                            || deviceName.equalsIgnoreCase(OLLONAME2)
-                            || deviceName.equalsIgnoreCase(OLLONAME3)
-                            || deviceName.equalsIgnoreCase(DISHNAME)
-                            || deviceName.equalsIgnoreCase(UCRNAME)) {
+                        || deviceName.equalsIgnoreCase(OLLONAME2)
+                        || deviceName.equalsIgnoreCase(OLLONAME3)
+                        || deviceName.equalsIgnoreCase(DISHNAME)
+                        || deviceName.equalsIgnoreCase(UCRNAME)
+                        || deviceName.equalsIgnoreCase(SICINAME)) {
                         // SetupBluetoothManager();
                         UnityPlayer.UnitySendMessage(UnityObjectName,
                                 "BluetoothDevice", deviceName);
@@ -626,7 +612,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
     public void initSensorManager() {
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         if (mSensorManager == null)
-            mSensorManager = new SiCiSensorManager(sensorManager, mHandler);
+            mSensorManager = new SiCiSensorManager(sensorManager);
     }
 
     final public static int TYPE_ACCELEROMETER = 1;
@@ -643,6 +629,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
     final public static int TYPE_HUMIDITY = 12;
     final public static int TYPE_AMBIENTTEMPERATURE = 13;
 
+    @SuppressLint("DefaultLocale")
     public void enableSensor(String type) {
         boolean retValue = mSensorManager.enable(Integer.parseInt(type), true);
         String message;
@@ -658,6 +645,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
         mSensorManager.enable(Integer.parseInt(type), false);
     }
 
+    @SuppressLint("DefaultLocale")
     public void hasSensorValue(String type) {
         boolean hasValue = mSensorManager.hasValue(Integer.parseInt(type));
         String message = String.format("%d:%s", Integer.parseInt(type),
@@ -666,6 +654,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
                 message);
     }
 
+    @SuppressLint("DefaultLocale")
     public void getSensorValue(String type) {
         float value0 = mSensorManager.getValue(Integer.parseInt(type), 0);
         float value1 = mSensorManager.getValue(Integer.parseInt(type), 1);

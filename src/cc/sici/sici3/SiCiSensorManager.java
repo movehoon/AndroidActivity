@@ -4,14 +4,11 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.Handler;
 
 public class SiCiSensorManager implements SensorEventListener {
     
     final int SENSOR_MAX = 13+1;
     
-    private Handler mHandler = null;
-
     private SensorManager mSensorManager = null;
     
     public Sensor[] mSensors = new Sensor[SENSOR_MAX];
@@ -19,10 +16,9 @@ public class SiCiSensorManager implements SensorEventListener {
     public float[][] mSensorValue = new float[SENSOR_MAX][];
     public float[] mMaxRange = new float[SENSOR_MAX];
     
-    public SiCiSensorManager(SensorManager sensorManager, Handler handler)
+    public SiCiSensorManager(SensorManager sensorManager)
     {
         mSensorManager = sensorManager;
-        mHandler = handler;
         
         for (int i = 0 ; i < SENSOR_MAX ; i++) {
             mSensorValue[i] = new float[3];
@@ -80,8 +76,6 @@ public class SiCiSensorManager implements SensorEventListener {
     }
 
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // TODO Auto-generated method stub
-        
     }
 
     public void onSensorChanged(SensorEvent event) {

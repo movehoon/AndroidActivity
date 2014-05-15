@@ -55,12 +55,6 @@ public class SiCi2Activity extends UnityPlayerActivity implements
     public static final int MESSAGE_DEVICE_NAME = 4;
     public static final String DEVICE_NAME = "SiCiBluetooth";
     public static final String UnityObjectName = "AndroidManager";
-    private final String OLLONAME = "FB155v2.2.1";
-    private final String OLLONAME2 = "BT-110v1.0.1";
-    private final String OLLONAME3 = "ROBOTIS BT-210";
-    private final String DISHNAME = "DISH";
-    private final String UCRNAME = "UCR";
-    private final String SICINAME = "SiCi";
     private BTManager mBTManager = null;
 
     public enum ROBOT_MODE {
@@ -413,21 +407,8 @@ public class SiCi2Activity extends UnityPlayerActivity implements
                     String deviceName = bd.getName();
                     LogMessage("BT", deviceName + " => " + bd.getAddress());
 
-                    if (deviceName.equalsIgnoreCase(OLLONAME)
-                        || deviceName.equalsIgnoreCase(OLLONAME2)
-                        || deviceName.equalsIgnoreCase(OLLONAME3)
-                        || deviceName.equalsIgnoreCase(DISHNAME)
-                        || deviceName.equalsIgnoreCase(UCRNAME)
-                        || deviceName.equalsIgnoreCase(SICINAME)) {
-                        // SetupBluetoothManager();
-                        UnityPlayer.UnitySendMessage(UnityObjectName,
-                                "BluetoothDevice", deviceName);
-                        // mBTManager.connect(bd);
-                        // break;
-
-                        LogMessage("BT", "SearchBluetoothDevice : "
-                                + deviceName);
-                    }
+                    UnityPlayer.UnitySendMessage(UnityObjectName,
+                            "BluetoothDevice", deviceName);
                 }
             } else {
                 LogMessage("BT", "Paired devices not found!");

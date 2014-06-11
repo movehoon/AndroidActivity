@@ -14,6 +14,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
@@ -29,11 +30,10 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
-import android.view.KeyEvent;
-import android.view.MotionEvent;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import com.unity3d.player.UnityPlayer;
 import com.unity3d.player.UnityPlayerActivity;
@@ -81,6 +81,25 @@ public class SiCi2Activity extends UnityPlayerActivity implements
     boolean TimerReset = false;
     boolean ErrorReset = false;
 
+    
+    /* USB2Serial variables */
+    public static final String USB2SerialDeviceName = "USB";
+    boolean isUsbSerialSelected = false;
+    byte[] writeBuffer = new byte[64];;
+    byte[] readBuffer = new byte[4096];
+    char[] readBufferToChar = new char[4096];
+    int[] actualNumBytes = new int[1];
+
+    public SharedPreferences sharePrefSettings;
+
+    /* thread to read the data */
+    public handler_thread handlerThread;
+    
+    /* declare a FT311 UART interface variable */
+    public FT311UARTInterface uartInterface;
+    /* USB2Serial variables - End */
+
+    
     public boolean CheckConnectWifi() {
         ConnectivityManager manager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         boolean isWifi = manager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
@@ -153,16 +172,34 @@ public class SiCi2Activity extends UnityPlayerActivity implements
         imageView = new ImageView(this);
         layout.addView(imageView, new LayoutParams(LayoutParams.FILL_PARENT,
                 LayoutParams.WRAP_CONTENT));
+
+        // Initialize for USB2Serial communication
+        uartInterface = new FT311UARTInterface(this, sharePrefSettings);
+
+        handlerThread = new handler_thread(mHandler);
+        handlerThread.start();
+
+    }
+
+    @Override
+    protected void onResume() {
+        // Ideally should implement onResume() and onPause()
+        // to take appropriate action when the activity looses focus
+        super.onResume();       
+        uartInterface.ResumeAccessory();
     }
 
     @Override
     public void onDestroy() {
-        super.onDestroy();
+        uartInterface.DestroyAccessory(false);
 
         if (mBTManager != null)
             mBTManager.stop();
+
         if (mSensorManager != null)
             mSensorManager.stop();
+
+        super.onDestroy();
     }
 
     @Override
@@ -375,7 +412,9 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 
     public void SendMessage(String hexMessage) {
         // Check that we're actually connected before trying anything
-        if (mBTManager.getState() != BTManager.STATE_CONNECTED) {
+        if (isUsbSerialSelected && uartInterface.accessory_attached) {
+        }
+        else if (mBTManager.getState() != BTManager.STATE_CONNECTED) {
             LogMessage("BT", "Bluetooth is not connected!");
             return;
         }
@@ -390,10 +429,16 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 //        Log.d("Unity", hexMessage + " => " + message[0] + ":" + message[1]
 //                + ":" + message[2] + ":" + message[3] + ":" + message[4] + ":"
 //                + message[5]);
-        try {
-            mBTManager.write(message);
-        } catch (Exception e) {
-            LogMessage("BT", "Write Error:" + e);
+        
+        if (isUsbSerialSelected && uartInterface.accessory_attached) {
+            uartInterface.SendData(num/2, message);
+        }
+        else {
+            try {
+                mBTManager.write(message);
+            } catch (Exception e) {
+                LogMessage("BT", "Write Error:" + e);
+            }
         }
     }
 
@@ -402,20 +447,22 @@ public class SiCi2Activity extends UnityPlayerActivity implements
             Set<BluetoothDevice> pairedDevices = mBluetoothAdapter
                     .getBondedDevices();
 
+            if (uartInterface.accessory_attached) {
+                UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothDevice", USB2SerialDeviceName);
+            }
+            
             if (pairedDevices.size() > 0) {
                 for (BluetoothDevice bd : pairedDevices) {
                     String deviceName = bd.getName();
                     LogMessage("BT", deviceName + " => " + bd.getAddress());
 
-                    UnityPlayer.UnitySendMessage(UnityObjectName,
-                            "BluetoothDevice", deviceName);
+                    UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothDevice", deviceName);
                 }
             } else {
                 LogMessage("BT", "Paired devices not found!");
             }
 
-            UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothDevice",
-                    "END");
+            UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothDevice", "END");
 
             LogMessage("BT", "SearchBluetoothDevice : " + "END");
         } catch (Exception e) {
@@ -437,25 +484,39 @@ public class SiCi2Activity extends UnityPlayerActivity implements
             mRobotMode = ROBOT_MODE.UCR;
     }
 
-    public void ConnectBluetooth(String deviceName) {
-        LogMessage("BT", "ConnectBluetooth");
-        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter
-                .getBondedDevices();
-        for (BluetoothDevice bd : pairedDevices) {
-            if (bd.getName().equalsIgnoreCase(deviceName)) {
-                SetupBluetoothManager();
-                mBTManager.connect(bd);
-                UnityPlayer.UnitySendMessage(UnityObjectName,
-                        "BluetoothConnectState", "Success");
-                return;
+    public void ConnectDevice(String deviceName) {
+        LogMessage("BT", "ConnectDevice");
+
+        if  (deviceName.equalsIgnoreCase(USB2SerialDeviceName)) {
+            uartInterface.SetConfig(115200, (byte)8, (byte)1, (byte)0, (byte)0);
+            isUsbSerialSelected = true;
+
+            UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothConnectState", "USB_Success");
+            LogMessage("BT", "STATE_CONNECTED");
+            return;
+        }
+        else {
+            isUsbSerialSelected = false;
+
+            Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+            for (BluetoothDevice bd : pairedDevices) {
+                if (bd.getName().equalsIgnoreCase(deviceName)) {
+                    SetupBluetoothManager();
+                    mBTManager.connect(bd);
+                    UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothConnectState", "BT_Success");
+                    return;
+                }
             }
         }
+        
 
-        UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothConnectState",
-                "Fail");
+        UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothConnectState", "Fail");
     }
 
     public void DisconnectBluetooth() {
+        if (isUsbSerialSelected && uartInterface.accessory_attached) {
+            LogMessage("BT", "STATE_DISCONNECTED");
+        }
         try {
             LogMessage("BT", "Attempting to break BT connection");
             if (mBTManager != null) {
@@ -519,6 +580,38 @@ public class SiCi2Activity extends UnityPlayerActivity implements
             }
         }
     };
+    
+    /* usb input data handler */
+    private class handler_thread extends Thread {
+        Handler mHandler;
+
+        /* constructor */
+        handler_thread(Handler h) {
+            mHandler = h;
+        }
+
+        public void run() {
+//            Message msg;
+
+            while (true) {
+                
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                }
+                
+                byte status = uartInterface.ReadData(4096, readBuffer,actualNumBytes);
+
+                if (status == 0x00 && actualNumBytes[0] > 0) {
+//                    msg = mHandler.obtainMessage();
+//                    mHandler.sendMessage(msg);
+                    mHandler.obtainMessage(MESSAGE_READ, actualNumBytes[0], -1, readBuffer).sendToTarget();
+                }
+
+            }
+        }
+    }
+
     
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
     public static String bytesToHex(byte[] bytes) {

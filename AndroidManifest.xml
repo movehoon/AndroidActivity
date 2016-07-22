@@ -16,7 +16,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             
-            <intent-filter>
+<!--             <intent-filter>
                <action android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED"/>
             </intent-filter>
             
@@ -24,7 +24,8 @@
                 android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED"
                 android:resource="@xml/accessory_filter">
             </meta-data>
-        </activity>
+ -->
+         </activity>
 
     </application>
     <uses-permission android:name="android.permission.INTERNET" />
@@ -34,6 +35,6 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <uses-permission android:name="android.permission.VIBRATE"/>
-    <uses-sdk android:minSdkVersion="12" android:targetSdkVersion="12"/>
+    
+    <uses-sdk android:minSdkVersion="12" android:targetSdkVersion="18"/>
 </manifest>

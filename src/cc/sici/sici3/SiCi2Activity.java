@@ -33,11 +33,12 @@ import android.util.Log;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Toast;
 
 import com.unity3d.player.UnityPlayer;
 import com.unity3d.player.UnityPlayerActivity;
 
+@SuppressLint("HandlerLeak")
+@SuppressWarnings("deprecation")
 public class SiCi2Activity extends UnityPlayerActivity implements
         TextToSpeech.OnInitListener, TextToSpeech.OnUtteranceCompletedListener {
     final String CONSUMER_KEY = "kiU3qSvu5f1NVhLRbAAOg";
@@ -274,9 +275,9 @@ public class SiCi2Activity extends UnityPlayerActivity implements
             }
             Log.i("Speech!!", "ERROR!!" + msg);
             UnitysendState("¿¡·¯" + msg);
-            if (ErrorReset) {
-                ResetSpeech();
-            }
+//            if (ErrorReset) {
+//                ResetSpeech();
+//            }
 
         }
 
@@ -333,7 +334,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
         });
     }
 
-    public void ResetSpeech() {
+	public void ResetSpeech() {
         if (mRecognizer != null) {
             mhandle.post(new Runnable() {
                 public void run() {
@@ -341,6 +342,11 @@ public class SiCi2Activity extends UnityPlayerActivity implements
                     mRecognizer.startListening(recognizerIntent);
                 }
             });
+            mHandler.postDelayed(new Runnable() {
+                public void run() {
+					mRecognizer.stopListening();
+                }
+            }, 3000);
             Log.d("Speech", "Reset");
         }
     }

@@ -209,6 +209,7 @@ public class UartService extends Service {
      *         callback.
      */
     public boolean connect(final String address) {
+        Log.d(TAG, "[UartService:connect] " + address);
         if (mBluetoothAdapter == null || address == null) {
             Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
             return false;

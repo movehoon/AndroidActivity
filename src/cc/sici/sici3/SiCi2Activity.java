@@ -548,11 +548,8 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 			mRobotMode = ROBOT_MODE.UCR;
 	}
 
-	public void ConnectDevice(String deviceName) {
-//		LogMessage("BT", "ConnectDevice");
-
-		Log.d(TAG, "[ConnectDevice] ConnectDevice: " + deviceName);
-		if (deviceName.equalsIgnoreCase(USB2SerialDeviceName)) {
+	public void ConnectDevice(String deviceAddress) {
+		if (deviceAddress.equalsIgnoreCase(USB2SerialDeviceName)) {
 			isUsbSerialSelected = true;
 			uartInterface.SetConfig(115200, (byte) 8, (byte) 1, (byte) 0, (byte) 0);
 			UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothConnectState", "USB_Success");
@@ -561,7 +558,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 			isUsbSerialSelected = false;
 			Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
 			for (BluetoothDevice bd : pairedDevices) {
-				if (bd.getName().equalsIgnoreCase(deviceName)) {
+				if (bd.getAddress().equalsIgnoreCase(deviceAddress)) {
 					SetupBluetoothManager();
 					mBTManager.connect(bd);
 					UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothConnectState", "BT_Success");
@@ -569,23 +566,16 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 				}
 			}
 			for (String bd : bleDeviceList) {
-				if (bd.contains(deviceName)) {
+				if (bd.contains(deviceAddress)) {
 					mBluetoothAdapter.stopLeScan(mLeScanCallback);
-					Log.d(TAG, "[ConnectDevice] ConnectBleDevice: " + deviceName);
-					if (mService.connect(deviceName)) {
-						Log.d(TAG, "[ConnectDevice] ConnectDevice Success" + deviceName);
+					if (mService.connect(deviceAddress))
 						UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothConnectState", "BT_Success");
-					}
-					else {
-						Log.d(TAG, "[ConnectDevice] ConnectDevice Fail" + deviceName);
+					else
 						UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothConnectState", "Fail");
-					}
 					return;
 				}
 			}
 		}
-
-		Log.e(TAG, "[ConnectDevice] ConnectDevice Fail");
 		UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothConnectState", "Fail");
 	}
 

@@ -69,6 +69,9 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 	private static final int UART_PROFILE_CONNECTED = 20;
 	private static final int UART_PROFILE_DISCONNECTED = 21;
 	private static final int STATE_OFF = 10;
+	
+	private static final int DEVICE_BT = 0;
+	private static final int DEVICE_BLE = 1;
 
 	private int mState = UART_PROFILE_DISCONNECTED;
 
@@ -76,6 +79,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 	private BTManager mBTManager = null;
 	private List<String> btDeviceList = new ArrayList<String>();
 	private List<String> bleDeviceList = new ArrayList<String>();
+	private int btDeviceType = 0;	// 0: DEVICE_BT, 1: DEVICE_BLE
 
 	public enum ROBOT_MODE {
 		ROBOTIS, ROBOROBO, UCR,
@@ -88,8 +92,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 
 	private TextToSpeech mTts;
 	private SpeechRecognizer mRecognizer = null;
-	Intent recognizerIntent = new Intent(
-			RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+	Intent recognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
 
 	int Time = 15000;
 	int LimitTime = 0;
@@ -102,8 +105,6 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 	boolean ResultReset = false;
 	boolean TimerReset = false;
 	boolean ErrorReset = false;
-
-	// private ImageView imageView;
 
 	/* USB2Serial variables */
 	public static final String USB2SerialDeviceName = "USB";
@@ -183,10 +184,6 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 		layout.setOrientation(LinearLayout.VERTICAL);
 		addContentView(layout, new LayoutParams(LayoutParams.FILL_PARENT,
 				LayoutParams.FILL_PARENT));
-
-		// imageView = new ImageView(this);
-		// layout.addView(imageView, new LayoutParams(LayoutParams.FILL_PARENT,
-		// LayoutParams.WRAP_CONTENT));
 
 		// Initialize for USB2Serial communication
 		uartInterface = new FT311UARTInterface(this, sharePrefSettings);
@@ -449,11 +446,11 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 
 	public void SendMessage(String hexMessage) {
 		// Check that we're actually connected before trying anything
-		if (isUsbSerialSelected && uartInterface.accessory_attached) {
-		} else if (mBTManager.getState() != BTManager.STATE_CONNECTED) {
-			LogMessage("BT", "Bluetooth is not connected!");
-			return;
-		}
+//		if (isUsbSerialSelected && uartInterface.accessory_attached) {
+//		} else if (mBTManager.getState() != BTManager.STATE_CONNECTED) {
+//			LogMessage("BT", "Bluetooth is not connected!");
+//			return;
+//		}
 
 		int num = hexMessage.length();
 		byte[] message = new byte[num / 2];
@@ -462,15 +459,18 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 			message[i / 2] = (byte) Integer.parseInt(hex, 16);
 			// Log.d("Unity", hex + " -> " + message[i / 2]);
 		}
-		// Log.d("Unity", hexMessage + " => " + message[0] + ":" + message[1]
-		// + ":" + message[2] + ":" + message[3] + ":" + message[4] + ":"
-		// + message[5]);
+//		 Log.d("Unity", hexMessage + " => " + message[0] + ":" + message[1]
+//		 + ":" + message[2] + ":" + message[3] + ":" + message[4] + ":"
+//		 + message[5]);
 
 		if (isUsbSerialSelected && uartInterface.accessory_attached) {
 			uartInterface.SendData(num / 2, message);
 		} else {
 			try {
-				mBTManager.write(message);
+				if (btDeviceType == DEVICE_BT)
+					mBTManager.write(message);
+				else if (btDeviceType == DEVICE_BLE)
+					mService.writeRXCharacteristic(message);
 			} catch (Exception e) {
 				LogMessage("BT", "Write Error:" + e);
 			}
@@ -524,8 +524,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 				public void run() {
 					String deviceInfo = device.getName() + "=>"+ device.getAddress();
 					LogMessage("BLE", deviceInfo);
-					if (!btDeviceList.contains(deviceInfo)
-							&& !bleDeviceList.contains(deviceInfo)) {
+					if (!btDeviceList.contains(deviceInfo) && !bleDeviceList.contains(deviceInfo)) {
 						UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothDevice", deviceInfo);
 						bleDeviceList.add(deviceInfo);
 					}
@@ -559,6 +558,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 			Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
 			for (BluetoothDevice bd : pairedDevices) {
 				if (bd.getAddress().equalsIgnoreCase(deviceAddress)) {
+					btDeviceType = DEVICE_BT;
 					SetupBluetoothManager();
 					mBTManager.connect(bd);
 					UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothConnectState", "BT_Success");
@@ -567,6 +567,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 			}
 			for (String bd : bleDeviceList) {
 				if (bd.contains(deviceAddress)) {
+					btDeviceType = DEVICE_BLE;
 					mBluetoothAdapter.stopLeScan(mLeScanCallback);
 					if (mService.connect(deviceAddress))
 						UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothConnectState", "BT_Success");
@@ -588,6 +589,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 			if (mBTManager != null) {
 				mBTManager.stop();
 				mBTManager = null;
+				mService.close();
 			}
 			UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothConnectState", "Fail");
 		} catch (Exception e) {
@@ -660,6 +662,8 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 					public void run() {
 						try {
 							// commThread.write(txValue);
+							UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothData",bytesToHex(txValue));
+
 						} catch (Exception e) {
 							Log.e(TAG, e.toString());
 						}
@@ -712,8 +716,7 @@ public class SiCi2Activity extends UnityPlayerActivity implements
 			case MESSAGE_READ:
 				int len = (int) msg.arg1;
 				byte[] readBuf = Arrays.copyOf((byte[]) msg.obj, len);
-				UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothData",
-						bytesToHex(readBuf));
+				UnityPlayer.UnitySendMessage(UnityObjectName, "BluetoothData",bytesToHex(readBuf));
 				break;
 			case MESSAGE_DEVICE_NAME:
 				// save the connected device's name
